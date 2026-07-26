@@ -1,0 +1,766 @@
+{
+  "name": "Abdullah Lead Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-scraper",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a7009f11-6b0f-4f7e-a350-225d95419701",
+      "name": "Lead Scraper Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        432,
+        -288
+      ],
+      "webhookId": "0d7acb44-dcbe-4f6d-8b36-c70dba2a91d1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bt",
+              "name": "businessType",
+              "type": "string",
+              "value": "={{ $json.body['WHAT BUSINESS YOU WANT TO SEARCH'] || $json.body.businessType || $json.businessType || '' }}"
+            },
+            {
+              "id": "loc",
+              "name": "location",
+              "type": "string",
+              "value": "={{ $json.body['WHERE YOU WANT TO SEARCH'] || $json.body.location || $json.location || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ace8a12e-16d3-4c27-9f36-bbd5504280cb",
+      "name": "Normalize Webhook Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "YOUR_TOKEN_HERE"
+            },
+            {
+              "name": "timeout",
+              "value": "50"
+            },
+            {
+              "name": "memory",
+              "value": "512"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ searchStringsArray: [$('Normalize Webhook Input').first().json.businessType + ' in ' + $('Normalize Webhook Input').first().json.location], locationQuery: $('Normalize Webhook Input').first().json.location, maxCrawledPlacesPerSearch: 25, language: 'en', website: 'withoutWebsite' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "8b032e90-b60f-4175-810b-850c67f03050",
+      "name": "Apify - Scrape Google Business Listings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "NAME",
+              "type": "string",
+              "value": "={{ ($json.businessName || $json.title || $json.name || '').trim() }}"
+            },
+            {
+              "id": "f2",
+              "name": "ADDRESS",
+              "type": "string",
+              "value": "={{ ($json.address || (($json.street || '') + ($json.neighborhood ? ', ' + $json.neighborhood : '')) || '').trim() }}"
+            },
+            {
+              "id": "f3",
+              "name": "POSTAL_CODE",
+              "type": "string",
+              "value": "={{ ($json.postalCode || $json.zip || ($json.address || '').match(/\\d{5}/) && ($json.address || '').match(/\\d{5}/)[0] || '').toString().trim() }}"
+            },
+            {
+              "id": "f4",
+              "name": "CITY",
+              "type": "string",
+              "value": "={{ $json.city || ($json.address || '').replace(/,?\\s*[A-Z]{2}\\s*\\d{5}.*$/, '').split(',').slice(-1)[0].trim() || ($json.sourceLocation || '').split(',')[0].trim() }}"
+            },
+            {
+              "id": "f5",
+              "name": "STATE",
+              "type": "string",
+              "value": "={{ $json.state || ($json.address || '').match(/,\\s*([A-Z]{2})\\s*\\d{5}/) && ($json.address || '').match(/,\\s*([A-Z]{2})\\s*\\d{5}/)[1] || $json.countryCode || '' }}"
+            },
+            {
+              "id": "f6",
+              "name": "REVIEWS",
+              "type": "string",
+              "value": "={{ ($json.rating != null ? $json.rating : ($json.totalScore != null ? $json.totalScore : 0)).toFixed(1) + '/5 (' + ($json.reviewsCount || 0) + ' reviews)' }}"
+            },
+            {
+              "id": "f7",
+              "name": "PHONE_NUMBER",
+              "type": "string",
+              "value": "={{ ($json.phone || $json.phoneUnformatted || '').trim() }}"
+            },
+            {
+              "id": "f8",
+              "name": "EMAIL",
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "f9",
+              "name": "SOCIAL_MEDIA",
+              "type": "string",
+              "value": "={{ ($json.socialMediaProfiles ? Object.values($json.socialMediaProfiles).join(', ') : '') || ($json.facebook || '') || ($json.instagram || '') || '' }}"
+            },
+            {
+              "id": "f10",
+              "name": "CATEGORY",
+              "type": "string",
+              "value": "={{ ($json.category || $json.categoryName || '').trim() }}"
+            },
+            {
+              "id": "f11",
+              "name": "WEBSITE",
+              "type": "string",
+              "value": "={{ ($json.website || $json.domain || '').trim() }}"
+            },
+            {
+              "id": "f12",
+              "name": "MAPS_URL",
+              "type": "string",
+              "value": "={{ $json.mapsUrl || $json.url || '' }}"
+            },
+            {
+              "id": "f13",
+              "name": "MESSAGE",
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "matchKey",
+              "name": "matchKey",
+              "type": "string",
+              "value": "={{ ($json.businessName || $json.title || $json.name || '').trim() + ' ' + ($json.city || ($json.address || '').replace(/,?\\s*[A-Z]{2}\\s*\\d{5}.*$/, '').split(',').slice(-1)[0].trim() || ($json.sourceLocation || '').split(',')[0].trim()) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d8d11a9f-ba95-452e-bbf8-79fb83a17490",
+      "name": "Map Lead Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1408,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "cachedResultName": "Abdullah Lead Scraper Results",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-5nbRFOnzaFEvaB18aCND3ud-wRdfnFaxT9WJSvuJ5M/edit?usp=drivesdk",
+          "mode": "list",
+          "value": "1-5nbRFOnzaFEvaB18aCND3ud-wRdfnFaxT9WJSvuJ5M"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "NAME",
+              "id": "NAME",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "ADDRESS",
+              "id": "ADDRESS",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "POSTAL_CODE",
+              "id": "POSTAL_CODE",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "CATEGORY",
+              "id": "CATEGORY",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "CITY",
+              "id": "CITY",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "STATE",
+              "id": "STATE",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "REVIEWS",
+              "id": "REVIEWS",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "PHONE_NUMBER",
+              "id": "PHONE_NUMBER",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "SOCIAL_MEDIA",
+              "id": "SOCIAL_MEDIA",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "MAPS_URL",
+              "id": "MAPS_URL",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "ADDRESS": "={{ $json.ADDRESS }}",
+            "CATEGORY": "={{ $json.CATEGORY }}",
+            "CITY": "={{ $json.CITY }}",
+            "MAPS_URL": "={{ $json.MAPS_URL }}",
+            "NAME": "={{ $json.NAME }}",
+            "PHONE_NUMBER": "={{ $json.PHONE_NUMBER }}",
+            "POSTAL_CODE": "={{ $json.POSTAL_CODE }}",
+            "REVIEWS": "={{ $json.REVIEWS }}",
+            "SOCIAL_MEDIA": "={{ $json.concatenated_socialProfileUrl || 'null' }}",
+            "STATE": "={{ $json.STATE }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "d54f56c6-85bd-4dfc-a45e-7dc4b7a7aadf",
+      "name": "Save Lead to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1632,
+        -112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Your leads are saved into record!', summary: { total_scraped: $('Check And Split Leads').first().json.totalScraped, leads_saved: $('Check And Split Leads').first().json.validCount, skipped_has_website: $('Check And Split Leads').first().json.filteredCount, skipped_low_rating: $('Check And Split Leads').first().json.lowRatingCount } }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ef93486b-4def-4649-a1ea-a33520d43057",
+      "name": "Respond - Leads Saved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1824,
+        -112
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "maxItems": 30
+      },
+      "id": "limit-raw-25",
+      "name": "Limit - Cap at 25 Raw Results",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        688,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "allBusinesses",
+        "options": {}
+      },
+      "id": "aggregate-before-if",
+      "name": "Aggregate All Results",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        688,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allBusinesses = $input.first().json.allBusinesses || [];\n\nconst withWebsite = allBusinesses.filter(b => {\n  const website = (b.website || b.domain || '').trim();\n  return website !== '';\n});\n\nconst lowRating = allBusinesses.filter(b => {\n  const website = (b.website || b.domain || '').trim();\n  const rating = b.totalScore || b.rating || 0;\n  return website === '' && rating > 0 && rating < 3;\n});\n\nconst valid = allBusinesses.filter(b => {\n  const hasName = (b.businessName || b.title || b.name || '').trim();\n  const hasPhone = (b.phone || b.phoneUnformatted || '').trim();\n  const notClosed = !b.permanentlyClosed;\n  const rating = b.totalScore || b.rating || 0;\n  const hasGoodRating = rating === 0 || rating >= 3;\n  const noWebsite = !(b.website || b.domain || '').trim();\n  return hasName && hasPhone && notClosed && hasGoodRating && noWebsite;\n});\n\nreturn [{\n  json: {\n    totalScraped: allBusinesses.length,\n    validCount: valid.length,\n    filteredCount: withWebsite.length,\n    lowRatingCount: lowRating.length,\n    validLeads: valid,\n    businessType: $('Normalize Webhook Input').first().json.businessType || '',\n    location: $('Normalize Webhook Input').first().json.location || ''\n  }\n}];"
+      },
+      "id": "check-and-split",
+      "name": "Check And Split Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-valid",
+              "leftValue": "={{ $json.validCount }}",
+              "operator": {
+                "operation": "gt",
+                "type": "number"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-any-valid",
+      "name": "IF - Any Valid Leads",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: 'NO DESIRED LEAD FOUND — all ' + $json.totalScraped + ' businesses scraped for ' + $json.businessType + ' in ' + $json.location + ' either have websites, are closed, or rated below 3 stars. Try a different city or business type.' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-no-desired",
+      "name": "Respond - No Desired Lead Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1152,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = $input.first().json.validLeads || [];\nreturn leads.map(b => ({ json: b }));"
+      },
+      "id": "split-leads-node",
+      "name": "Split Valid Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/tri_angle~social-media-finder/run-sync-get-dataset-items",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "YOUR_TOKEN_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ profileNames: [$json.NAME + ' ' + $json.CITY], socials: ['facebook','linkedin'] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 180000
+        }
+      },
+      "id": "6e9c7711-5e4f-4082-a879-70edb00218d5",
+      "name": "Apify - Find Social Profile by Name",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ Boolean($json.socialProfileUrl) && $json.socialProfileUrl.toString().startsWith('http') && !/\\/(groups?|posts?|people)(\\/|\\?|$)/i.test($json.socialProfileUrl) }}",
+              "operator": {
+                "operation": "true",
+                "type": "boolean"
+              },
+              "rightValue": true,
+              "id": "e108adbf-b2c4-4fc7-800c-8ce88603b2ab"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7dbff2a2-b9c8-4fe8-8ebb-98b64828e1fa",
+      "name": "Filter - Valid Social URLs",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1408,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "socialProfileUrl",
+              "includeEmpty": "={{ false }}",
+              "separateBy": ", "
+            }
+          ]
+        },
+        "fieldsToSplitBy": "inputProfileName",
+        "options": {
+          "outputFormat": "separateItems"
+        }
+      },
+      "id": "13c24f30-e0c5-41d4-b7df-4bad8bd77a0e",
+      "name": "Summarize - Group Socials Per Lead",
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        1632,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "matchKey",
+              "field2": "inputProfileName"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "id": "0cb557ee-0ae5-49c9-bc66-123e419fc933",
+      "name": "Merge - Combine Lead + Social Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1632,
+        64
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lead Scraper Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Webhook Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Webhook Input": {
+      "main": [
+        [
+          {
+            "node": "Apify - Scrape Google Business Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit - Cap at 25 Raw Results": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate All Results": {
+      "main": [
+        [
+          {
+            "node": "Check And Split Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check And Split Leads": {
+      "main": [
+        [
+          {
+            "node": "IF - Any Valid Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Any Valid Leads": {
+      "main": [
+        [
+          {
+            "node": "Split Valid Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - No Desired Lead Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Valid Leads": {
+      "main": [
+        [
+          {
+            "node": "Map Lead Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond - Leads Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Scrape Google Business Listings": {
+      "main": [
+        [
+          {
+            "node": "Limit - Cap at 25 Raw Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Lead Fields": {
+      "main": [
+        [
+          {
+            "node": "Apify - Find Social Profile by Name",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge - Combine Lead + Social Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Find Social Profile by Name": {
+      "main": [
+        [
+          {
+            "node": "Filter - Valid Social URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter - Valid Social URLs": {
+      "main": [
+        [
+          {
+            "node": "Summarize - Group Socials Per Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize - Group Socials Per Lead": {
+      "main": [
+        [
+          {
+            "node": "Merge - Combine Lead + Social Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge - Combine Lead + Social Data": {
+      "main": [
+        [
+          {
+            "node": "Save Lead to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond - Leads Saved": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "9708fef3-337b-4cbb-98f2-ee5ed66462e4",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "eb30a7377e070167b6ed60ba18c32ce463ef79c527b818861a15cc907fca2f53"
+  },
+  "nodeGroups": [],
+  "id": "pxovjGvqQwpS8lP4",
+  "tags": []
+}
